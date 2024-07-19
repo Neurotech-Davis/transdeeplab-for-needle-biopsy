@@ -3,6 +3,7 @@ import torch
 from PIL import Image
 import numpy as np
 import cv2
+import os
 from model.swin_deeplab import SwinDeepLab
 import importlib
 
@@ -32,6 +33,11 @@ def predict(model, image):
         outputs = model(image)
         outputs = torch.argmax(torch.softmax(outputs, dim=1), dim=1).squeeze(0)
         return outputs.cpu().numpy()
+    
+def string_exploder(file_path):
+    file_name = os.path.basename(file_path)
+    file_name_without_extension = os.path.splitext(file_name)[0]
+    return file_name_without_extension
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -39,6 +45,7 @@ if __name__ == "__main__":
     parser.add_argument('--ckpt_path', type=str, default='pretrained_ckpt/swin_224_7_4level.pth', help='path to checkpoint file')
     parser.add_argument('--image_path', type=str, required=True, help='path to input image')
     parser.add_argument('--img_size', type=int, default=224, help='input image size')
+    parser.add_argument('--threshold', type=int, default=128, help='threshold for binary image')
     args = parser.parse_args()
 
     # Dynamically import the config
@@ -62,7 +69,12 @@ if __name__ == "__main__":
     # Get the number of classes from the configuration
     num_classes = config_module.DecoderConfig.num_classes
 
-    # Save the mask
-    mask_image = Image.fromarray((mask * 255 / (num_classes - 1)).astype(np.uint8))
-    mask_image.save('segmentation_mask.png')
-    print(f"Segmentation mask saved as 'segmentation_mask.png' (size: {args.img_size}x{args.img_size})")
+    # Save the mask as a grayscale image
+    mask_image = (mask * 255 / (num_classes - 1)).astype(np.uint8)
+    
+    # Apply threshold to create black and white image
+    _, bw_image = cv2.threshold(mask_image, args.threshold, 255, cv2.THRESH_BINARY)
+    
+    bw_image = Image.fromarray(bw_image)
+    bw_image.save(f'model_generated_masks/{string_exploder(args.image_path)}_mask.png')
+    print(f"Mask saved as model_generated_masks/{string_exploder(args.image_path)}_mask.png")
