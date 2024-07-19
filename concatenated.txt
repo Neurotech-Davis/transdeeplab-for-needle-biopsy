@@ -1,0 +1,948 @@
+TransDeepLab
+The official code for "TransDeepLab: Convolution-Free Transformer-based DeepLab v3+ for Medical Image Segmentation".
+
+Proposed Model
+
+Updates
+July 19, 2022: Initial release.
+July 4, 2022: Submitted to MICCAI PRIME2022 [Under Review] [Accepted].
+Setting up and Training
+We use the code base from the Swin-Unet GitHub repo as our starting point.
+
+In order to run the code and experiments, you need to first install the dependencies and then download and move the data to the right place.
+
+For the Synapse dataset, we used the data provided by TransUnet's authors.
+For ISIC 2017-18 datasets, we used the ISIC Challenge datasets link.
+For the PH2 dataset, we used this link.
+We have put the required instructions for doing the above steps in the ./setup.sh file in the repo for your convenience. cd to this repo directory and then run it to install dependencies and download and move data to the right dir.
+
+Download Swin-T pre-trained weights from this link and put it into the folder pretrained_ckpt/.
+
+Then you need to run the train.py file with the appropriate arguments to run your experiment. let's just see an example for now for the Synapse dataset:
+
+python train.py --config_file 'swin_224_7_{# of SSPP}level' --dataset Synapse --root_path './data' --max_epochs 200 --output_dir '.'  --img_size 224 --base_lr 0.05 --batch_size 24
+Config files and hyperparameters
+All the hyperparameters related to building different models are in separate files in ./model/configs directory.
+
+For each experiment, you need to make your desired config_name.py file and put it in the model/configs dir and then enter the file name (without .py suffix) in the python train.py command you saw in the previous section after --config_file arg.
+
+For the rest of the hyperparameters like batch_size, max_epochs, base_lr, ... look at the Swin-Unet or the code here to see what you can change and how to do so.
+
+Test
+The model can be tested with the following command using test.py file. During training, model checkpoints will be saved to disk with the following format: output_dir/{config_file_name}_epoch_{epoch_num}.pth.
+
+It takes the checkpoint (model weight file) name as an input argument and loads the appropriate config file from the configs dir.
+
+Other arguments and flags can be given to the test.py file if some settings need to be modified but --ckpt_path and --config_file are the only required arguments.
+
+Trained weights for our best-reported results in the paper for the Synapse dataset are easily accessible from this link, where you could download it as a sole folder via gdown or setting specific links listed under the below table:
+
+Model setting name	Pre-trained weights	--config_file name
+SSPP Level 1	link	swin_224_7_1level
+SSPP Level 2	link	swin_224_7_2level
+SSPP Level 3	link	swin_224_7_3level
+SSPP Level 4	link	swin_224_7_4level
+❗ Remember to put these weights in a specific folder that you are going to address them with test.py via --ckpt_path flag.
+
+Comparison results table on the Synapse dataset:
+
+Methods
+DSC
+↑
+
+HD
+↓
+
+Aorta	Gallbladder	Kidney(L)	Kidney(R)	Liver	Pancreas	Spleen	Stomach
+V-Net	68.81	-	75.34	51.87	77.10	80.75	87.84	40.05	80.56	56.98
+R50 U-Net	74.68	36.87	87.74	63.66	80.60	78.19	93.74	56.90	85.87	74.16
+U-Net	76.85	39.70	89.07	69.72	77.77	68.60	93.43	53.98	86.67	75.58
+R50 Att-UNet	75.57	36.97	55.92	63.91	79.20	72.71	93.56	49.37	87.19	74.95
+Att-UNet	77.77	36.02	89.55	68.88	77.98	71.11	93.57	58.04	87.30	75.75
+R50 ViT	71.29	32.87	73.73	55.13	75.80	72.20	91.51	45.99	81.99	73.95
+TransUnet	77.48	31.69	87.23	63.13	81.87	77.02	94.08	55.86	85.08	75.62
+SwinUnet	79.13	21.55	85.47	66.53	83.28	79.61	94.29	56.58	90.66	76.60
+DeepLabv3+ (CNN)	77.63	39.95	88.04	66.51	82.76	74.21	91.23	58.32	87.43	73.53
+TransDeepLab	80.16	21.25	86.04	69.16	84.08	79.88	93.53	61.19	89.00	78.40
+Impact of modifying modules inside the proposed method:
+Setting
+DSC
+↑
+
+HD
+↓
+
+Aorta	Gallbladder	Kidney(L)	Kidney(R)	Liver	Pancreas	Spleen	Stomach
+CNN as Encoder	75.89	28.87	85.03	65.17	80.18	76.38	90.49	57.29	85.68	69.93
+Basic Scale Fusion	79.16	22.14	85.44	68.05	82.77	80.79	93.80	58.74	87.78	75.96
+SSPP Level 1	79.01	26.63	85.61	68.47	82.43	78.02	94.19	58.52	88.34	76.46
+SSPP Level 2	80.16	21.25	86.04	69.16	84.08	79.88	93.53	61.19	89.00	78.40
+SSPP Level 3	79.87	18.93	86.34	66.41	84.13	82.40	93.73	59.28	89.66	76.99
+SSPP Level 4	79.85	25.69	85.64	69.36	82.93	81.25	93.09	63.18	87.80	75.56
+A look at the number of parameters:
+Model	# Encoder Parameters	# ASPP Parameters	# Decoder Parameters	# Total
+Original DeepLab (Xception-512)	37.86	15.53	1.30	54.70
+Original Swin-Unet (224-7)	-	-	-	27.17
+Our TransDeepLab (swin_224_7_1level)	12.15	1.83	3.49	17.48
+Our TransDeepLab (swin_224_7_2level)	12.15	5.49	3.49	21.14
+Our TransDeepLab (swin_224_7_3level)	12.15	9.20	3.49	24.85
+Our TransDeepLab (swin_224_7_4level)	12.15	12.96	3.49	28.61
+
+
+
+# --------------------------------------------------------
+# Swin Transformer
+# Copyright (c) 2021 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Ze Liu
+# --------------------------------------------------------'
+
+import os
+import yaml
+from yacs.config import CfgNode as CN
+
+_C = CN()
+
+# Base config files
+_C.BASE = ['']
+
+# -----------------------------------------------------------------------------
+# Data settings
+# -----------------------------------------------------------------------------
+_C.DATA = CN()
+# Batch size for a single GPU, could be overwritten by command line argument
+_C.DATA.BATCH_SIZE = 128
+# Path to dataset, could be overwritten by command line argument
+_C.DATA.DATA_PATH = ''
+# Dataset name
+_C.DATA.DATASET = 'imagenet'
+# Input image size
+_C.DATA.IMG_SIZE = 224
+# Interpolation to resize image (random, bilinear, bicubic)
+_C.DATA.INTERPOLATION = 'bicubic'
+# Use zipped dataset instead of folder dataset
+# could be overwritten by command line argument
+_C.DATA.ZIP_MODE = False
+# Cache Data in Memory, could be overwritten by command line argument
+_C.DATA.CACHE_MODE = 'part'
+# Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.
+_C.DATA.PIN_MEMORY = True
+# Number of data loading threads
+_C.DATA.NUM_WORKERS = 8
+
+# -----------------------------------------------------------------------------
+# Model settings
+# -----------------------------------------------------------------------------
+_C.MODEL = CN()
+# Model type
+_C.MODEL.TYPE = 'swin'
+# Model name
+_C.MODEL.NAME = 'swin_tiny_patch4_window7_224'
+# Checkpoint to resume, could be overwritten by command line argument
+_C.MODEL.PRETRAIN_CKPT = './pretrained_ckpt/swin_tiny_patch4_window7_224.pth'
+_C.MODEL.RESUME = ''
+# Number of classes, overwritten in data preparation
+_C.MODEL.NUM_CLASSES = 1000
+# Dropout rate
+_C.MODEL.DROP_RATE = 0.0
+# Drop path rate
+_C.MODEL.DROP_PATH_RATE = 0.1
+# Label Smoothing
+_C.MODEL.LABEL_SMOOTHING = 0.1
+
+# Swin Transformer parameters
+_C.MODEL.SWIN = CN()
+_C.MODEL.SWIN.PATCH_SIZE = 4
+_C.MODEL.SWIN.IN_CHANS = 3
+_C.MODEL.SWIN.EMBED_DIM = 96
+_C.MODEL.SWIN.DEPTHS = [2, 2, 6, 2]
+_C.MODEL.SWIN.DECODER_DEPTHS = [2, 2, 6, 2]
+_C.MODEL.SWIN.NUM_HEADS = [3, 6, 12, 24]
+_C.MODEL.SWIN.WINDOW_SIZE = 7
+_C.MODEL.SWIN.MLP_RATIO = 4.
+_C.MODEL.SWIN.QKV_BIAS = True
+_C.MODEL.SWIN.QK_SCALE = None
+_C.MODEL.SWIN.APE = False
+_C.MODEL.SWIN.PATCH_NORM = True
+_C.MODEL.SWIN.FINAL_UPSAMPLE= "expand_first"
+
+# -----------------------------------------------------------------------------
+# Training settings
+# -----------------------------------------------------------------------------
+_C.TRAIN = CN()
+_C.TRAIN.START_EPOCH = 0
+_C.TRAIN.EPOCHS = 300
+_C.TRAIN.WARMUP_EPOCHS = 20
+_C.TRAIN.WEIGHT_DECAY = 0.05
+_C.TRAIN.BASE_LR = 5e-4
+_C.TRAIN.WARMUP_LR = 5e-7
+_C.TRAIN.MIN_LR = 5e-6
+# Clip gradient norm
+_C.TRAIN.CLIP_GRAD = 5.0
+# Auto resume from latest checkpoint
+_C.TRAIN.AUTO_RESUME = True
+# Gradient accumulation steps
+# could be overwritten by command line argument
+_C.TRAIN.ACCUMULATION_STEPS = 0
+# Whether to use gradient checkpointing to save memory
+# could be overwritten by command line argument
+_C.TRAIN.USE_CHECKPOINT = False
+
+# LR scheduler
+_C.TRAIN.LR_SCHEDULER = CN()
+_C.TRAIN.LR_SCHEDULER.NAME = 'cosine'
+# Epoch interval to decay LR, used in StepLRScheduler
+_C.TRAIN.LR_SCHEDULER.DECAY_EPOCHS = 30
+# LR decay rate, used in StepLRScheduler
+_C.TRAIN.LR_SCHEDULER.DECAY_RATE = 0.1
+
+# Optimizer
+_C.TRAIN.OPTIMIZER = CN()
+_C.TRAIN.OPTIMIZER.NAME = 'adamw'
+# Optimizer Epsilon
+_C.TRAIN.OPTIMIZER.EPS = 1e-8
+# Optimizer Betas
+_C.TRAIN.OPTIMIZER.BETAS = (0.9, 0.999)
+# SGD momentum
+_C.TRAIN.OPTIMIZER.MOMENTUM = 0.9
+
+# -----------------------------------------------------------------------------
+# Augmentation settings
+# -----------------------------------------------------------------------------
+_C.AUG = CN()
+# Color jitter factor
+_C.AUG.COLOR_JITTER = 0.4
+# Use AutoAugment policy. "v0" or "original"
+_C.AUG.AUTO_AUGMENT = 'rand-m9-mstd0.5-inc1'
+# Random erase prob
+_C.AUG.REPROB = 0.25
+# Random erase mode
+_C.AUG.REMODE = 'pixel'
+# Random erase count
+_C.AUG.RECOUNT = 1
+# Mixup alpha, mixup enabled if > 0
+_C.AUG.MIXUP = 0.8
+# Cutmix alpha, cutmix enabled if > 0
+_C.AUG.CUTMIX = 1.0
+# Cutmix min/max ratio, overrides alpha and enables cutmix if set
+_C.AUG.CUTMIX_MINMAX = None
+# Probability of performing mixup or cutmix when either/both is enabled
+_C.AUG.MIXUP_PROB = 1.0
+# Probability of switching to cutmix when both mixup and cutmix enabled
+_C.AUG.MIXUP_SWITCH_PROB = 0.5
+# How to apply mixup/cutmix params. Per "batch", "pair", or "elem"
+_C.AUG.MIXUP_MODE = 'batch'
+
+# -----------------------------------------------------------------------------
+# Testing settings
+# -----------------------------------------------------------------------------
+_C.TEST = CN()
+# Whether to use center crop when testing
+_C.TEST.CROP = True
+
+# -----------------------------------------------------------------------------
+# Misc
+# -----------------------------------------------------------------------------
+# Mixed precision opt level, if O0, no amp is used ('O0', 'O1', 'O2')
+# overwritten by command line argument
+_C.AMP_OPT_LEVEL = ''
+# Path to output folder, overwritten by command line argument
+_C.OUTPUT = ''
+# Tag of experiment, overwritten by command line argument
+_C.TAG = 'default'
+# Frequency to save checkpoint
+_C.SAVE_FREQ = 1
+# Frequency to logging info
+_C.PRINT_FREQ = 10
+# Fixed random seed
+_C.SEED = 0
+# Perform evaluation only, overwritten by command line argument
+_C.EVAL_MODE = False
+# Test throughput only, overwritten by command line argument
+_C.THROUGHPUT_MODE = False
+# local rank for DistributedDataParallel, given by command line argument
+_C.LOCAL_RANK = 0
+
+
+def _update_config_from_file(config, cfg_file):
+    config.defrost()
+    with open(cfg_file, 'r') as f:
+        yaml_cfg = yaml.load(f, Loader=yaml.FullLoader)
+
+    for cfg in yaml_cfg.setdefault('BASE', ['']):
+        if cfg:
+            _update_config_from_file(
+                config, os.path.join(os.path.dirname(cfg_file), cfg)
+            )
+    print('=> merge config from {}'.format(cfg_file))
+    config.merge_from_file(cfg_file)
+    config.freeze()
+
+
+def update_config(config, args):
+    # _update_config_from_file(config, args.cfg)
+
+    config.defrost()
+    if args.opts:
+        config.merge_from_list(args.opts)
+
+    # merge from specific arguments
+    if args.batch_size:
+        config.DATA.BATCH_SIZE = args.batch_size
+    if args.zip:
+        config.DATA.ZIP_MODE = True
+    if args.cache_mode:
+        config.DATA.CACHE_MODE = args.cache_mode
+    if args.img_size:
+        config.DATA.IMG_SIZE = args.img_size
+    if args.resume:
+        config.MODEL.RESUME = args.resume
+    if args.accumulation_steps:
+        config.TRAIN.ACCUMULATION_STEPS = args.accumulation_steps
+    if args.use_checkpoint:
+        config.TRAIN.USE_CHECKPOINT = True
+    if args.amp_opt_level:
+        config.AMP_OPT_LEVEL = args.amp_opt_level
+    if args.tag:
+        config.TAG = args.tag
+    if args.eval:
+        config.EVAL_MODE = True
+    if args.throughput:
+        config.THROUGHPUT_MODE = True
+
+    config.freeze()
+
+
+def get_config(args):
+    """Get a yacs CfgNode object with default values."""
+    # Return a clone so that the defaults will not be altered
+    # This is for the "local variable" use pattern
+    config = _C.clone()
+    update_config(config, args)
+
+    return config
+
+import os
+import cv2
+import numpy as np
+import pandas as pd
+import json
+
+# Paths
+annotations_path = './mask_generation/annotations.csv'
+images_folder = './mask_generation/fun_images'
+output_folder = './mask_generation/masks'
+
+# Create the output folder if it doesn't exist
+os.makedirs(output_folder, exist_ok=True)
+
+# Load the annotations
+annotations = pd.read_csv(annotations_path)
+
+def create_mask(image_filename, annotations):
+    # Read the image to get its dimensions
+    image_path = os.path.join(images_folder, image_filename)
+    image = cv2.imread(image_path)
+    height, width, _ = image.shape
+
+    # Create an empty mask
+    mask = np.zeros((height, width), dtype=np.uint8)
+
+    # Get the annotations for the specific image
+    image_annotations = annotations[annotations['filename'] == image_filename]
+
+    for _, row in image_annotations.iterrows():
+        # Parse the region_shape_attributes JSON string
+        shape_attributes = json.loads(row['region_shape_attributes'])
+        all_points_x = shape_attributes['all_points_x']
+        all_points_y = shape_attributes['all_points_y']
+        
+        # Extract polygon points
+        points = np.array(list(zip(all_points_x, all_points_y)), np.int32)
+        points = points.reshape((-1, 1, 2))
+
+        # Draw the filled polygon
+        cv2.fillPoly(mask, [points], 255)
+
+    # Invert mask to get the holes
+    mask_inv = cv2.bitwise_not(mask)
+    contours, _ = cv2.findContours(mask_inv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    for contour in contours:
+        cv2.drawContours(mask, [contour], 0, 0, -1)
+
+    return mask
+
+for image_filename in os.listdir(images_folder):
+    if image_filename.endswith('.png'):
+        mask = create_mask(image_filename, annotations)
+        mask_filename = os.path.splitext(image_filename)[0] + '_mask.png'
+        mask_path = os.path.join(output_folder, mask_filename)
+        cv2.imwrite(mask_path, mask)
+
+print("Mask generation complete.")
+
+import argparse
+import torch
+from PIL import Image
+import numpy as np
+import cv2
+import os
+from model.swin_deeplab import SwinDeepLab
+import importlib
+
+def preprocess_image(image_path, img_size):
+    # Load the image using OpenCV
+    image = cv2.imread(image_path)
+    if image is None:
+        raise FileNotFoundError(f"Image at path {image_path} not found.")
+    
+    # Resize the image to the specified size (e.g., 224x224)
+    image = cv2.resize(image, (224, 224), interpolation=cv2.INTER_LINEAR)
+    
+    # Normalize the image
+    image = image / 255.0
+    
+    # Convert the image from HWC to CHW format
+    image = image.transpose(2, 0, 1)
+    
+    # Add batch dimension
+    image = np.expand_dims(image, axis=0)
+    
+    return image
+
+def predict(model, image):
+    with torch.no_grad():
+        image = torch.tensor(image, dtype=torch.float32).cuda()
+        outputs = model(image)
+        outputs = torch.argmax(torch.softmax(outputs, dim=1), dim=1).squeeze(0)
+        return outputs.cpu().numpy()
+    
+def string_exploder(file_path):
+    file_name = os.path.basename(file_path)
+    file_name_without_extension = os.path.splitext(file_name)[0]
+    return file_name_without_extension
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config_file', type=str, default='swin_224_7_4level', help='config file name without .py extension')
+    parser.add_argument('--ckpt_path', type=str, default='pretrained_ckpt/swin_224_7_4level.pth', help='path to checkpoint file')
+    parser.add_argument('--image_path', type=str, required=True, help='path to input image')
+    parser.add_argument('--img_size', type=int, default=224, help='input image size')
+    parser.add_argument('--threshold', type=int, default=128, help='threshold for binary image')
+    args = parser.parse_args()
+
+    # Dynamically import the config
+    config_module = importlib.import_module(f'model.configs.{args.config_file}')
+    
+    # Create the model
+    model = SwinDeepLab(
+        config_module.EncoderConfig,
+        config_module.ASPPConfig,
+        config_module.DecoderConfig
+    ).cuda()
+
+    # Load the checkpoint
+    model.load_state_dict(torch.load(args.ckpt_path))
+    model.eval()
+
+    # Preprocess and predict
+    image = preprocess_image(args.image_path, img_size=args.img_size)
+    mask = predict(model, image)
+
+    # Get the number of classes from the configuration
+    num_classes = config_module.DecoderConfig.num_classes
+
+    # Save the mask as a grayscale image
+    mask_image = (mask * 255 / (num_classes - 1)).astype(np.uint8)
+    
+    # Apply threshold to create black and white image
+    _, bw_image = cv2.threshold(mask_image, args.threshold, 255, cv2.THRESH_BINARY)
+    
+    bw_image = Image.fromarray(bw_image)
+    bw_image.save(f'model_generated_masks/{string_exploder(args.image_path)}_mask.png')
+    print(f"Mask saved as model_generated_masks/{string_exploder(args.image_path)}_mask.png")
+
+import argparse
+import logging
+import os
+import random
+import importlib
+import sys
+
+import numpy as np
+import torch
+import torch.backends.cudnn as cudnn
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from datasets.dataset_synapse import Synapse_dataset
+from utils import test_single_volume, get_num_parameters
+from config import get_config
+from model.swin_deeplab import SwinDeepLab
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--ckpt_path', type=str, required=True, 
+                    default='./trained_weights/swin_224_7_1level.pth', help='absolute path to saved ckpt during training.')
+parser.add_argument('--config_file', type=str, required=True,
+                    default='swin_224_7_1level', help='config file name w/o suffix')
+parser.add_argument('--volume_path', type=str,
+                    default='./data/Synapse', help='root dir for validation volume data')  # for acdc volume_path=root_dir
+parser.add_argument('--dataset', type=str,
+                    default='Synapse', help='experiment_name')
+parser.add_argument('--num_classes', type=int,
+                    default=9, help='output channel of network')
+parser.add_argument('--list_dir', type=str,
+                    default='./lists/lists_Synapse', help='list dir')
+parser.add_argument('--output_dir', default='./results/', type=str, help='output dir')   
+parser.add_argument('--max_iterations', type=int,default=30000, help='maximum epoch number to train')
+parser.add_argument('--max_epochs', type=int, default=150, help='maximum epoch number to train')
+parser.add_argument('--batch_size', type=int, default=24,
+                    help='batch_size per gpu')
+parser.add_argument('--img_size', type=int, default=224, help='input patch size of network input')
+parser.add_argument('--is_savenii', action="store_true", help='whether to save results during inference')
+parser.add_argument('--test_save_dir', type=str, default='../predictions', help='saving prediction as nii!')
+parser.add_argument('--deterministic', type=int,  default=1, help='whether use deterministic training')
+parser.add_argument('--base_lr', type=float,  default=0.01, help='segmentation network learning rate')
+parser.add_argument('--seed', type=int, default=1234, help='random seed')
+parser.add_argument(
+        "--opts",
+        help="Modify config options by adding 'KEY VALUE' pairs. ",
+        default=None,
+        nargs='+',
+    )
+parser.add_argument('--zip', action='store_true', help='use zipped dataset instead of folder dataset')
+parser.add_argument('--cache-mode', type=str, default='part', choices=['no', 'full', 'part'],
+                    help='no: no cache, '
+                            'full: cache all data, '
+                            'part: sharding the dataset into nonoverlapping pieces and only cache one piece')
+parser.add_argument('--resume', help='resume from checkpoint')
+parser.add_argument('--accumulation-steps', type=int, help="gradient accumulation steps")
+parser.add_argument('--use-checkpoint', action='store_true',
+                    help="whether to use gradient checkpointing to save memory")
+parser.add_argument('--amp-opt-level', type=str, default='O1', choices=['O0', 'O1', 'O2'],
+                    help='mixed precision opt level, if O0, no amp is used')
+parser.add_argument('--tag', help='tag of experiment')
+parser.add_argument('--eval', action='store_true', help='Perform evaluation only')
+parser.add_argument('--throughput', action='store_true', help='Test throughput only')
+
+args = parser.parse_args()
+if args.dataset == "Synapse":
+    args.volume_path = os.path.join(args.volume_path, "test_vol_h5")
+config = get_config(args)
+
+
+def inference(args, model, test_save_path=None):
+    db_test = args.Dataset(base_dir=args.volume_path, split="test_vol", list_dir=args.list_dir)
+    testloader = DataLoader(db_test, batch_size=1, shuffle=False, num_workers=1)
+    logging.info("{} test iterations per epoch".format(len(testloader)))
+    model.eval()
+    metric_list = 0.0
+    for i_batch, sampled_batch in tqdm(enumerate(testloader)):
+        h, w = sampled_batch["image"].size()[2:]
+        image, label, case_name = sampled_batch["image"], sampled_batch["label"], sampled_batch['case_name'][0]
+        metric_i = test_single_volume(image, label, model, classes=args.num_classes, patch_size=[args.img_size, args.img_size],
+                                      test_save_path=test_save_path, case=case_name, z_spacing=args.z_spacing)
+        metric_list += np.array(metric_i)
+        logging.info('idx %d case %s mean_dice %f mean_hd95 %f' % (i_batch, case_name, np.mean(metric_i, axis=0)[0], np.mean(metric_i, axis=0)[1]))
+    metric_list = metric_list / len(db_test)
+    for i in range(1, args.num_classes):
+        logging.info('Mean class %d mean_dice %f mean_hd95 %f' % (i, metric_list[i-1][0], metric_list[i-1][1]))
+    performance = np.mean(metric_list, axis=0)[0]
+    mean_hd95 = np.mean(metric_list, axis=0)[1]
+    logging.info('Testing performance in best val model: mean_dice : %f mean_hd95 : %f' % (performance, mean_hd95))
+    return "Testing Finished!"
+
+
+if __name__ == "__main__":
+
+    if not args.deterministic:
+        cudnn.benchmark = True
+        cudnn.deterministic = False
+    else:
+        cudnn.benchmark = False
+        cudnn.deterministic = True
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+
+    dataset_config = {
+        'Synapse': {
+            'Dataset': Synapse_dataset,
+            'volume_path': args.volume_path,
+            'list_dir': './lists/lists_Synapse',
+            'num_classes': 9,
+            'z_spacing': 1,
+        },
+    }
+    dataset_name = args.dataset
+    args.num_classes = dataset_config[dataset_name]['num_classes']
+    args.volume_path = dataset_config[dataset_name]['volume_path']
+    args.Dataset = dataset_config[dataset_name]['Dataset']
+    args.list_dir = dataset_config[dataset_name]['list_dir']
+    args.z_spacing = dataset_config[dataset_name]['z_spacing']
+    args.is_pretrain = True
+
+    
+    model_config = importlib.import_module(f'model.configs.{args.config_file}')
+    args.img_size = model_config.EncoderConfig.img_size # important and bug friendly!
+    
+    net = SwinDeepLab(
+        model_config.EncoderConfig, 
+        model_config.ASPPConfig, 
+        model_config.DecoderConfig
+    ).cuda()
+    
+    # Printing out the number of parameters in the model and each module
+    encoder_p, aspp_p, decoder_p = get_num_parameters(net)
+    print(f"Number of Encoder Parameters: {encoder_p:.3f}")
+    print(f"Number of ASPP Parameters: {aspp_p:.3f}")
+    print(f"Number of Decoder Parameters: {decoder_p:.3f}")
+    print(f"Total Number of Parameters: {encoder_p + aspp_p + decoder_p:.3f}")
+
+    msg = net.load_state_dict(torch.load(args.ckpt_path))
+    snapshot = args.ckpt_path.split('/')[-1]
+    snapshot_name = snapshot.split('/')[-1]
+
+    log_folder = './test_log/test_log_'
+    os.makedirs(log_folder, exist_ok=True)
+    logging.basicConfig(filename=log_folder + '/'+snapshot_name+".txt", level=logging.INFO, format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+    logging.info(str(args))
+    logging.info(snapshot_name)
+
+    if args.is_savenii:
+        args.test_save_dir = os.path.join(args.output_dir, "predictions")
+        test_save_path = args.test_save_dir 
+        os.makedirs(test_save_path, exist_ok=True)
+    else:
+        test_save_path = None
+    inference(args, net, test_save_path)
+
+
+
+import argparse
+import logging
+import os
+import random
+import importlib
+
+import numpy as np
+import torch
+import torch.backends.cudnn as cudnn
+from trainer import trainer_synapse
+from config import get_config
+
+from model.swin_deeplab import SwinDeepLab
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--root_path', type=str,
+                    default='../data/Synapse/train_npz', help='root dir for data')
+parser.add_argument('--config_file', type=str,
+                    default='swin_224_7_a', help='config file name w/o suffix')
+parser.add_argument('--dataset', type=str,
+                    default='Synapse', help='experiment_name')
+parser.add_argument('--list_dir', type=str,
+                    default='./lists/lists_Synapse', help='list dir')
+parser.add_argument('--num_classes', type=int,
+                    default=9, help='output channel of network')
+parser.add_argument('--output_dir', type=str, default='.', help='output dir')                   
+parser.add_argument('--max_iterations', type=int,
+                    default=30000, help='maximum epoch number to train')
+parser.add_argument('--max_epochs', type=int,
+                    default=150, help='maximum epoch number to train')
+parser.add_argument('--batch_size', type=int,
+                    default=24, help='batch_size per gpu')
+parser.add_argument('--n_gpu', type=int, default=1, help='total gpu')
+parser.add_argument('--deterministic', type=int,  default=1,
+                    help='whether use deterministic training')
+parser.add_argument('--base_lr', type=float,  default=0.01,
+                    help='segmentation network learning rate')
+parser.add_argument('--img_size', type=int,
+                    default=224, help='input patch size of network input')
+parser.add_argument('--seed', type=int,
+                    default=1234, help='random seed')
+# parser.add_argument('--cfg', type=str, required=True, metavar="FILE", help='path to config file', )
+parser.add_argument(
+        "--opts",
+        help="Modify config options by adding 'KEY VALUE' pairs. ",
+        default=None,
+        nargs='+',
+    )
+parser.add_argument('--zip', action='store_true', help='use zipped dataset instead of folder dataset')
+parser.add_argument('--cache-mode', type=str, default='part', choices=['no', 'full', 'part'],
+                    help='no: no cache, '
+                            'full: cache all data, '
+                            'part: sharding the dataset into nonoverlapping pieces and only cache one piece')
+parser.add_argument('--resume', help='resume from checkpoint')
+parser.add_argument('--accumulation-steps', type=int, help="gradient accumulation steps")
+parser.add_argument('--use-checkpoint', action='store_true',
+                    help="whether to use gradient checkpointing to save memory")
+parser.add_argument('--amp-opt-level', type=str, default='O1', choices=['O0', 'O1', 'O2'],
+                    help='mixed precision opt level, if O0, no amp is used')
+parser.add_argument('--tag', help='tag of experiment')
+parser.add_argument('--eval', action='store_true', help='Perform evaluation only')
+parser.add_argument('--throughput', action='store_true', help='Test throughput only')
+
+args = parser.parse_args()
+if args.dataset == "Synapse":
+    args.root_path = os.path.join(args.root_path, "train_npz")
+config = get_config(args)
+
+
+if __name__ == "__main__":
+    if not args.deterministic:
+        cudnn.benchmark = True
+        cudnn.deterministic = False
+    else:
+        cudnn.benchmark = False
+        cudnn.deterministic = True
+
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+
+    dataset_name = args.dataset
+    dataset_config = {
+        'Synapse': {
+            'root_path': args.root_path,
+            'list_dir': './lists/lists_Synapse',
+            'num_classes': 9,
+        },
+    }
+
+    if args.batch_size != 24 and args.batch_size % 6 == 0:
+        args.base_lr *= args.batch_size / 24
+    args.num_classes = dataset_config[dataset_name]['num_classes']
+    args.root_path = dataset_config[dataset_name]['root_path']
+    args.list_dir = dataset_config[dataset_name]['list_dir']
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+        
+    model_config = importlib.import_module(f'model.configs.{args.config_file}')
+    net = SwinDeepLab(
+        model_config.EncoderConfig, 
+        model_config.ASPPConfig, 
+        model_config.DecoderConfig
+    ).cuda()
+    
+    if model_config.EncoderConfig.encoder_name == 'swin' and model_config.EncoderConfig.load_pretrained:
+        net.encoder.load_from('./pretrained_ckpt/swin_tiny_patch4_window7_224.pth')
+    if model_config.ASPPConfig.aspp_name == 'swin' and model_config.ASPPConfig.load_pretrained:
+        net.aspp.load_from('./pretrained_ckpt/swin_tiny_patch4_window7_224.pth')
+    if model_config.DecoderConfig.decoder_name == 'swin' and model_config.DecoderConfig.load_pretrained and not model_config.DecoderConfig.extended_load:
+        net.decoder.load_from('./pretrained_ckpt/swin_tiny_patch4_window7_224.pth')
+    if model_config.DecoderConfig.decoder_name == 'swin' and model_config.DecoderConfig.load_pretrained and model_config.DecoderConfig.extended_load:
+        net.decoder.load_from_extended('./pretrained_ckpt/swin_tiny_patch4_window7_224.pth')
+    
+    trainer = {'Synapse': trainer_synapse,}
+    trainer[dataset_name](args, net, args.output_dir)
+import argparse
+import logging
+import os
+import random
+import sys
+import time
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from tensorboardX import SummaryWriter
+from torch.nn.modules.loss import CrossEntropyLoss
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from utils import DiceLoss
+from torchvision import transforms
+
+def trainer_synapse(args, model, snapshot_path):
+    from datasets.dataset_synapse import Synapse_dataset, RandomGenerator
+    logging.basicConfig(filename=snapshot_path + f"/{args.config_file}_log.txt", level=logging.INFO,
+                        format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+    logging.info(str(args))
+    base_lr = args.base_lr
+    num_classes = args.num_classes
+    batch_size = args.batch_size * args.n_gpu
+    db_train = Synapse_dataset(base_dir=args.root_path, list_dir=args.list_dir, split="train",
+                               transform=transforms.Compose(
+                                   [RandomGenerator(output_size=[args.img_size, args.img_size])]))
+    print("The length of train set is: {}".format(len(db_train)))
+
+    def worker_init_fn(worker_id):
+        random.seed(args.seed + worker_id)
+
+    trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True,
+                             worker_init_fn=worker_init_fn)
+    if args.n_gpu > 1:
+        model = nn.DataParallel(model)
+    model.train()
+    ce_loss = CrossEntropyLoss()
+    dice_loss = DiceLoss(num_classes)
+    optimizer = optim.SGD(model.parameters(), lr=base_lr, momentum=0.9, weight_decay=0.0001)
+    writer = SummaryWriter(snapshot_path + '/log')
+    iter_num = 0
+    max_epoch = args.max_epochs
+    max_iterations = args.max_epochs * len(trainloader)  # max_epoch = max_iterations // len(trainloader) + 1
+    logging.info("{} iterations per epoch. {} max iterations ".format(len(trainloader), max_iterations))
+    best_performance = 0.0
+    iterator = tqdm(range(max_epoch), ncols=70)
+    for epoch_num in iterator:
+        for i_batch, sampled_batch in enumerate(trainloader):
+            image_batch, label_batch = sampled_batch['image'], sampled_batch['label']
+            image_batch, label_batch = image_batch.cuda(), label_batch.cuda()
+            outputs = model(image_batch)
+            loss_ce = ce_loss(outputs, label_batch[:].long())
+            loss_dice = dice_loss(outputs, label_batch, softmax=True)
+            loss = 0.4 * loss_ce + 0.6 * loss_dice
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            lr_ = base_lr * (1.0 - iter_num / max_iterations) ** 0.9
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr_
+
+            iter_num = iter_num + 1
+            writer.add_scalar('info/lr', lr_, iter_num)
+            writer.add_scalar('info/total_loss', loss, iter_num)
+            writer.add_scalar('info/loss_ce', loss_ce, iter_num)
+
+            logging.info('iteration %d : loss : %f, loss_ce: %f' % (iter_num, loss.item(), loss_ce.item()))
+
+            if iter_num % 20 == 0:
+                image = image_batch[1, 0:1, :, :]
+                image = (image - image.min()) / (image.max() - image.min())
+                writer.add_image('train/Image', image, iter_num)
+                outputs = torch.argmax(torch.softmax(outputs, dim=1), dim=1, keepdim=True)
+                writer.add_image('train/Prediction', outputs[1, ...] * 50, iter_num)
+                labs = label_batch[1, ...].unsqueeze(0) * 50
+                writer.add_image('train/GroundTruth', labs, iter_num)
+
+        save_interval = 10
+        if epoch_num > int(max_epoch / 2) and (epoch_num + 1) % save_interval == 0:
+            filename = f'{args.config_file}_epoch_{epoch_num}.pth'
+            save_mode_path = os.path.join(snapshot_path, filename)
+            torch.save(model.state_dict(), save_mode_path)
+            logging.info("save model to {}".format(save_mode_path))
+
+        if epoch_num >= max_epoch - 1:
+            filename = f'{args.config_file}_epoch_{epoch_num}.pth'
+            save_mode_path = os.path.join(snapshot_path, filename)
+            torch.save(model.state_dict(), save_mode_path)
+            logging.info("save model to {}".format(save_mode_path))
+            iterator.close()
+            break
+
+    writer.close()
+    return "Training Finished!"
+
+import numpy as np
+import torch
+from medpy import metric
+from scipy.ndimage import zoom
+import torch.nn as nn
+import SimpleITK as sitk
+
+
+class DiceLoss(nn.Module):
+    def __init__(self, n_classes):
+        super(DiceLoss, self).__init__()
+        self.n_classes = n_classes
+
+    def _one_hot_encoder(self, input_tensor):
+        tensor_list = []
+        for i in range(self.n_classes):
+            temp_prob = input_tensor == i  # * torch.ones_like(input_tensor)
+            tensor_list.append(temp_prob.unsqueeze(1))
+        output_tensor = torch.cat(tensor_list, dim=1)
+        return output_tensor.float()
+
+    def _dice_loss(self, score, target):
+        target = target.float()
+        smooth = 1e-5
+        intersect = torch.sum(score * target)
+        y_sum = torch.sum(target * target)
+        z_sum = torch.sum(score * score)
+        loss = (2 * intersect + smooth) / (z_sum + y_sum + smooth)
+        loss = 1 - loss
+        return loss
+
+    def forward(self, inputs, target, weight=None, softmax=False):
+        if softmax:
+            inputs = torch.softmax(inputs, dim=1)
+        target = self._one_hot_encoder(target)
+        if weight is None:
+            weight = [1] * self.n_classes
+        assert inputs.size() == target.size(), 'predict {} & target {} shape do not match'.format(inputs.size(), target.size())
+        class_wise_dice = []
+        loss = 0.0
+        for i in range(0, self.n_classes):
+            dice = self._dice_loss(inputs[:, i], target[:, i])
+            class_wise_dice.append(1.0 - dice.item())
+            loss += dice * weight[i]
+        return loss / self.n_classes
+
+
+def calculate_metric_percase(pred, gt):
+    pred[pred > 0] = 1
+    gt[gt > 0] = 1
+    if pred.sum() > 0 and gt.sum()>0:
+        dice = metric.binary.dc(pred, gt)
+        hd95 = metric.binary.hd95(pred, gt)
+        return dice, hd95
+    elif pred.sum() > 0 and gt.sum()==0:
+        return 1, 0
+    else:
+        return 0, 0
+
+
+def test_single_volume(image, label, net, classes, patch_size=[256, 256], test_save_path=None, case=None, z_spacing=1):
+    image, label = image.squeeze(0).cpu().detach().numpy(), label.squeeze(0).cpu().detach().numpy()
+    if len(image.shape) == 3:
+        prediction = np.zeros_like(label)
+        for ind in range(image.shape[0]):
+            slice = image[ind, :, :]
+            x, y = slice.shape[0], slice.shape[1]
+            if x != patch_size[0] or y != patch_size[1]:
+                slice = zoom(slice, (patch_size[0] / x, patch_size[1] / y), order=3)  # previous using 0
+            input = torch.from_numpy(slice).unsqueeze(0).unsqueeze(0).float().cuda()
+            net.eval()
+            with torch.no_grad():
+                outputs = net(input)
+                out = torch.argmax(torch.softmax(outputs, dim=1), dim=1).squeeze(0)
+                out = out.cpu().detach().numpy()
+                if x != patch_size[0] or y != patch_size[1]:
+                    pred = zoom(out, (x / patch_size[0], y / patch_size[1]), order=0)
+                else:
+                    pred = out
+                prediction[ind] = pred
+    else:
+        input = torch.from_numpy(image).unsqueeze(
+            0).unsqueeze(0).float().cuda()
+        net.eval()
+        with torch.no_grad():
+            out = torch.argmax(torch.softmax(net(input), dim=1), dim=1).squeeze(0)
+            prediction = out.cpu().detach().numpy()
+    metric_list = []
+    for i in range(1, classes):
+        metric_list.append(calculate_metric_percase(prediction == i, label == i))
+
+    if test_save_path is not None:
+        img_itk = sitk.GetImageFromArray(image.astype(np.float32))
+        prd_itk = sitk.GetImageFromArray(prediction.astype(np.float32))
+        lab_itk = sitk.GetImageFromArray(label.astype(np.float32))
+        img_itk.SetSpacing((1, 1, z_spacing))
+        prd_itk.SetSpacing((1, 1, z_spacing))
+        lab_itk.SetSpacing((1, 1, z_spacing))
+        sitk.WriteImage(prd_itk, test_save_path + '/'+case + "_pred.nii.gz")
+        sitk.WriteImage(img_itk, test_save_path + '/'+ case + "_img.nii.gz")
+        sitk.WriteImage(lab_itk, test_save_path + '/'+ case + "_gt.nii.gz")
+    return metric_list
+
+def get_num_parameters(net):
+    encoder_p = sum([p.numel() for p in net.encoder.parameters()]) / 10**6
+    aspp_p = sum([p.numel() for p in net.aspp.parameters()]) / 10**6
+    decoder_p = sum([p.numel() for p in net.decoder.parameters()]) / 10**6
+    return encoder_p, aspp_p, decoder_p
+
