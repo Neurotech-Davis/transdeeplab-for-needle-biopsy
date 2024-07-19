@@ -15,6 +15,6 @@ python3 script.py --image_path "mask_generation/fun_images/217613113.png"
 
 This python script produces masks based on a given annotation file. This is how you use it:
 ```bash 
-python script_name.py --image_dir ./mask_generation/fun_images --annotation_file ./mask_generation/annotations1.csv --mask_dir ./mask_generation/masks
+python script_name.py --image_dir "./mask_generation/fun_images" --annotation_file "./mask_generation/annotations1.csv" --mask_dir ./"mask_generation/masks"
 ``` 
 The only required argument is the annotation file. 
